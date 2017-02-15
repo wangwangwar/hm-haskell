@@ -2,13 +2,19 @@
 datatype term = Tyvar of string
               | Tyapp of string * (term list)
 
-(* subs: (term, string) list -> term -> term *)
-(* subs: list of `substitutions` {term/string} -> `term` to be substituted -> substituted term 
-  1. if `term` is a variable, apply the `substitutions` to the term.
-  2. if `term` is an empty application, `term` is the result.
-  3. if `term` is an application and not empty, map the `substitutions` to
-  every expressions of the `term`.
- *)
+(* 
+  *Types*
+
+  subs: (term, string) list -> term -> term
+
+  *Notes*
+
+  subs: `substitutions`, `termToBeSubstituted`
+    1. if `term` is a variable, apply the `substitutions` to the term.
+    2. if `term` is an empty application, `term` is the result.
+    3. if `term` is an application and not empty, map the `substitutions` to
+    every expressions of the `term`.
+*)
 fun subs [] term = term
   | subs ((t1, v1)::ss) (term as Tyvar name) = 
   if name = v1 then t1 else subs ss term
@@ -21,11 +27,20 @@ fun subs [] term = term
     Tyapp (name, arglist [] args)
   end
 
-(* compose: (term, string) list -> (term, string) list -> (term, string) list *)
-(* iter:  *)
-(* compose list of `substitutions1` and list of `substitution2` 
-  `iter`: 
- *)
+(* 
+  *Types*
+
+  compose: (term, string) list -> (term, string) list -> (term, string) list
+    iter: (term, string) list -> (term, string) -> (term, string) list -> (term, string) list 
+
+  *Notes*
+
+  compose: `substitutions1`, `substitution2`
+    use `iter` to apply every substitution of `substitutions1` to `substitution2`
+
+  iter: `resultList`, `aSubstitution`, `listToBeComposed`
+    apply `aSubstitution` to `listToBeComposed` and get `resultList`
+*)
 fun compose [] s1 = s1
   | compose (s::ss) s1 =
     let fun iter r s [] = rev r
@@ -37,6 +52,45 @@ fun compose [] s1 = s1
 
 exception Unify of string
 
+
+(*
+  *Types*
+
+  unify: term -> term -> (term, string) list
+    iter: (term, string) list -> term -> term -> (term, string) list
+      occurs: string -> term -> bool
+      unify_args: (term, string) list -> term list -> term list -> (term, string) list
+
+  *Notes*
+
+  unify: `t1`, `t2`
+    Call the helper function `iter` to unify `t1` and `t2`.
+
+  iter: `revertedListOfResult`, `t1`, `t2`
+    The helper function to unify `t1` `t2` in an iterate way.
+    1. `t1` is a variable named `v1`, and `t2` is a variable named `v2`. If the two names `v1` and `v2` are equal, add
+    the substitution `{t1/v2}`, or empty list `[]`??? (Why not the unchanged `r`?)
+    2. `t1` is a variable named `v` and `t2` is an empty application, add the substitution `{t2/v}`.
+    3. `t1` is an empty application and `t2` is a variable named `v`, add the substitution `{t1/v}`.
+    4. `t1` is a variable named `v` and `t2` is an nonempty applicaton, if v
+    doesn't occur in t2, add the substitution `{t2/v}`, or error.
+    5. `t1` is an nonempty applicaton and `t2` is a variable named `v`, if v
+    doesn't occur in t1, add the substitution `{t1/v}`, or error.
+    6. `t1` and `t2` are both applications, if the names are equal and the
+    number of args are equal, unify each term of `args1` and `args2` one to one
+    correspondence.
+
+  occurs: `nameOfTerm`, `term`
+    decide whether `nameOfTerm` occurs in `term`
+        
+  unify_args: `revertedListOfSubstitution`, `termList1`, `termList2`
+    unify `termList1` and `termList2`, which separately are two applications' args list.
+    1. The length of `termList1` must be the same as `termList2`'s.
+    2. unify each term of `termList1` and `termList2` one to one correspondence,
+    using pre-collected information `revertedListOfSubstitution`.
+    at the end of each iteration, compose the result substitutions to
+    `revertedListOfSubstitution`.
+*)
 fun unify t1 t2 =
   let fun iter r t1 t2 =
     let fun occurs v (Tyapp (name, [])) = false

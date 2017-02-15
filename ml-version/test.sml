@@ -14,4 +14,4 @@ val t1 = j (x, y, z)
 val t2 = j (f (y, y), f (z, z), f (a, a));
 
 val U = unify t1 t2;
-(* ppsubs U; *)
+ppsubs U;
